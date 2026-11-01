@@ -83,7 +83,8 @@ certificate handling are the JDK's own.
 - `src/engine.lisp` — the pump: drives `SSLEngine` wrap/unwrap over the
   transport stream. Transport reads are **framed by the 5-byte TLS record
   header** (so a blocking transport never deadlocks and `unwrap` is called ~once
-  per record, which matters because each Java call is interpreted).
+  per record, which matters because each Java call is a round-trip through
+  OpenLDK).
 - `src/streams.lisp` — the `trivial-gray-streams` binary stream and the
   client/server constructors (`SSLEngine` configured via one `SSLParameters`).
 - `src/context.lisp` — `SSLContext` with key/trust managers.
@@ -91,9 +92,11 @@ certificate handling are the JDK's own.
 - `compat/cl+ssl.lisp`, `compat/pure-tls.lisp` — thin drop-in layers over the
   core (systems `cl-jsse/cl+ssl`, `cl-jsse/pure-tls`).
 
-**Performance:** OpenLDK interprets bytecode, so TLS 1.3's ECDHE is very slow;
-restrict a context to TLS 1.2 + `TLS_RSA_WITH_AES_128_GCM_SHA256` for fast
-handshakes (this is an interpreter cost, not a protocol recommendation).
+**Performance:** OpenLDK JIT-compiles bytecode to native via SBCL (compiling
+each method on first use). The default TLS 1.3 ECDHE handshake was observed to
+be very slow in testing; restrict a context to TLS 1.2 +
+`TLS_RSA_WITH_AES_128_GCM_SHA256` for fast handshakes (a workaround, not a
+protocol recommendation — no forward secrecy).
 
 ## Conventions & Patterns
 

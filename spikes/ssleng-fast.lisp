@@ -60,8 +60,8 @@
     (java-call "init([Ljavax/net/ssl/KeyManager;[Ljavax/net/ssl/TrustManager;Ljava/security/SecureRandom;)V" ctx nil tms nil)
     ctx))
 
-;; Force TLS 1.2 with RSA key exchange: no ECDHE, so OpenLDK's interpreter does
-;; one RSA-2048 private op instead of repeated elliptic-curve scalar mult.  The
+;; Force TLS 1.2 with RSA key exchange: no ECDHE, which was observed to be very
+;; slow under OpenLDK on the first handshake.  The
 ;; point is a cheap end-to-end PASS proving wrap/unwrap, not a cipher endorsement.
 (defun string-array (&rest strings)
   (make-java-array-of "java.lang.String" (mapcar #'jstr strings)))

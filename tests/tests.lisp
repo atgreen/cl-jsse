@@ -4,8 +4,8 @@
 ;;;; SPDX-License-Identifier: MIT
 ;;;;
 ;;;; A real client<->server TLS exchange over a loopback TCP socket, driven by
-;;;; the gray-stream API.  Forced to TLS 1.2 with RSA key exchange: OpenLDK
-;;;; interprets the crypto, and the default TLS 1.3 ECDHE suites are too slow to
+;;;; the gray-stream API.  Forced to TLS 1.2 with RSA key exchange: the default
+;;;; TLS 1.3 ECDHE handshake was observed to be far too slow under OpenLDK to
 ;;;; test against.  The server identity is a throwaway self-signed PKCS12
 ;;;; generated here at test time with the JDK's keytool (so no private key is
 ;;;; committed); the client uses +verify-none+ with hostname checking off, since

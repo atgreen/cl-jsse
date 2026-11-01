@@ -91,20 +91,22 @@ would quietly weaken a caller that relied on it. Use the JSSE-native `:keystore`
 
 ## Performance note
 
-OpenLDK *interprets* JVM bytecode, so TLS asymmetric crypto is far slower than
-on a native JVM. The default TLS 1.3 suites use elliptic-curve (ECDHE) key
-exchange, whose scalar multiplication is especially costly under interpretation;
-a full handshake can take minutes. Restricting a context to TLS 1.2 with RSA key
-exchange avoids the EC math and handshakes in seconds:
+OpenLDK JIT-compiles Java bytecode to native code (via SBCL), translating and
+compiling each method the first time it runs. A full TLS 1.3 handshake exercises
+a large amount of elliptic-curve (ECDHE) code, and in our testing that first
+handshake was very slow — on the order of minutes — while a TLS 1.2 handshake
+with RSA key exchange completed in seconds. Restricting a context to the latter
+keeps handshakes fast:
 
 ```lisp
 (cl-jsse:make-context :protocols '("TLSv1.2")
                       :cipher-suites '("TLS_RSA_WITH_AES_128_GCM_SHA256"))
 ```
 
-This is an OpenLDK interpreter cost, not a protocol recommendation — RSA key
-exchange has no forward secrecy. The test suite uses it only to keep handshakes
-fast enough to run.
+This is a workaround for the observed cost, not a protocol recommendation — RSA
+key exchange has no forward secrecy. The test suite uses it only to keep
+handshakes fast enough to run. We haven't isolated how much of the cost is
+one-time (first-use compilation of all that crypto code) versus steady-state.
 
 ## Building and testing
 

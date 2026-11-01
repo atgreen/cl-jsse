@@ -14,8 +14,8 @@
 ;;;; version, 2-byte length): we read exactly one complete record at a time.
 ;;;; That keeps a blocking transport from deadlocking (we never wait for more
 ;;;; bytes than the peer has promised) and keeps the count of unwrap() calls --
-;;;; each an interpreted Java round-trip under OpenLDK, and so not free -- down
-;;;; to roughly one per record.
+;;;; each a Lisp->Java round-trip through OpenLDK, and so not free -- down to
+;;;; roughly one per record.
 
 (in-package #:cl-jsse)
 

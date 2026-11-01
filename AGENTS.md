@@ -146,13 +146,14 @@ During development OpenLDK is resolved from the local checkout `~/git/openldk`
 
 - `src/engine.lisp` — drives `SSLEngine` wrap/unwrap; transport reads are framed
   by the 5-byte TLS record header (no deadlock on a blocking transport, ~one
-  interpreted `unwrap` per record).
+  `unwrap` per record -- each a round-trip through OpenLDK).
 - `src/streams.lisp` — the gray stream + client/server constructors.
 - `src/context.lisp` — `SSLContext` with key/trust managers.
 - `src/certificate.lisp` — peer X.509 accessors.
 - `compat/{cl+ssl,pure-tls}.lisp` — thin drop-in layers.
 
-OpenLDK interprets bytecode, so TLS 1.3 ECDHE is slow; restrict a context to
+OpenLDK JIT-compiles bytecode to native via SBCL. The default TLS 1.3 ECDHE
+handshake was observed to be very slow in testing; restrict a context to
 TLS 1.2 + `TLS_RSA_WITH_AES_128_GCM_SHA256` for fast handshakes.
 
 ## Conventions & Patterns
