@@ -9,6 +9,12 @@ state machine built into the JDK OpenLDK reads. There is no OpenSSL, no C
 dependency, and no FFI: the crypto and certificate handling are the JDK's own,
 reached through OpenLDK.
 
+> **Status:** `cl-jsse` is **not** a performant TLS implementation and isn't
+> meant to be one. It's a proof-of-technology for OpenLDK — a demonstration that
+> a real, security-sensitive JDK subsystem (JSSE) can be driven from Common Lisp
+> through OpenLDK. For production TLS, reach for [cl+ssl](https://github.com/cl-plus-ssl/cl-plus-ssl)
+> or [pure-tls](https://github.com/atgreen/pure-tls).
+
 It offers three APIs:
 
 - **`cl-jsse`** — the native API: a `trivial-gray-streams` binary stream plus a
