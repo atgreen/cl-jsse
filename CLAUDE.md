@@ -60,18 +60,50 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
-_Add your build and test commands here_
+SBCL + ocicl. Requires **OpenLDK** (`openldk/interop`) and a **JDK 25** with
+`JAVA_HOME` set (OpenLDK reads the JDK's classes, crypto, and CA trust store).
 
 ```bash
-# Example:
-# npm install
-# npm test
+# Tests (loopback TLS over real sockets; forced to TLS1.2+RSA to stay fast):
+JAVA_HOME=/path/to/jdk-25 sbcl --eval '(asdf:test-system "cl-jsse/tests")'
 ```
+
+During development, OpenLDK is resolved from the local checkout `~/git/openldk`
+(newer than the ocicl-published release; see bead cl-jsse-8ur) via an ASDF
+source-registry pointing at it. `spikes/ssleng-fast.lisp` is the standalone
+handshake spike that proved `SSLEngine` works under OpenLDK.
 
 ## Architecture Overview
 
-_Add a brief overview of your project architecture_
+`cl-jsse` wraps a caller-provided Lisp byte stream in TLS using
+`javax.net.ssl.SSLEngine` (the transport-agnostic TLS state machine), reached
+through `openldk/interop`. There is no OpenSSL, C, or FFI — the crypto and
+certificate handling are the JDK's own.
+
+- `src/engine.lisp` — the pump: drives `SSLEngine` wrap/unwrap over the
+  transport stream. Transport reads are **framed by the 5-byte TLS record
+  header** (so a blocking transport never deadlocks and `unwrap` is called ~once
+  per record, which matters because each Java call is interpreted).
+- `src/streams.lisp` — the `trivial-gray-streams` binary stream and the
+  client/server constructors (`SSLEngine` configured via one `SSLParameters`).
+- `src/context.lisp` — `SSLContext` with key/trust managers.
+- `src/certificate.lisp` — accessors over peer X.509 certs.
+- `compat/cl+ssl.lisp`, `compat/pure-tls.lisp` — thin drop-in layers over the
+  core (systems `cl-jsse/cl+ssl`, `cl-jsse/pure-tls`).
+
+**Performance:** OpenLDK interprets bytecode, so TLS 1.3's ECDHE is very slow;
+restrict a context to TLS 1.2 + `TLS_RSA_WITH_AES_128_GCM_SHA256` for fast
+handshakes (this is an interpreter cost, not a protocol recommendation).
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+- Interop idioms come from `openldk.interop` (`java-call`, `java-static`,
+  `java-new`, `jstring`/`lstring`, `make-java-array-of`, `with-foreign-errors`),
+  used the way `~/git/cl-jdbc` does.
+- Compat layers **refuse** security-relevant options they cannot honour (a
+  `:verify-callback`, encrypted keys, PEM identity/CA files) rather than
+  silently ignoring them; JSSE-native `:keystore`/`:truststore` are the
+  supported path.
+- Use Java `SSLParameters` to set protocols/ciphers/ALPN/client-auth in one
+  `setSSLParameters` call — setting them on the engine and then applying a
+  separately-fetched `SSLParameters` clobbers them.

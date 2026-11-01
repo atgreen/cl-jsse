@@ -1,3 +1,9 @@
+*.fasl
+*.abcl
+
+# ocicl vendored dependencies (resolved on build, not committed)
+/ocicl/
+/ocicl.csv
 
 # Beads / Dolt files (added by bd init)
 .dolt/
@@ -5,3 +11,6 @@
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Local test keystore (generated; see spikes/gen-test-keystore.sh)
+spikes/server.p12

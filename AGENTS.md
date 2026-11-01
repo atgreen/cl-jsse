@@ -125,3 +125,42 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/core-concepts/sync-concepts.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+
+## Build & Test
+
+SBCL + ocicl. Requires **OpenLDK** (`openldk/interop`) and a **JDK 25** with
+`JAVA_HOME` set (OpenLDK reads the JDK's classes, crypto, and CA trust store).
+
+```bash
+JAVA_HOME=/path/to/jdk-25 sbcl --eval '(asdf:test-system "cl-jsse/tests")'
+```
+
+During development OpenLDK is resolved from the local checkout `~/git/openldk`
+(newer than the ocicl-published release; see bead cl-jsse-8ur).
+`spikes/ssleng-fast.lisp` is the standalone handshake spike.
+
+## Architecture Overview
+
+`cl-jsse` wraps a caller-provided Lisp byte stream in TLS using
+`javax.net.ssl.SSLEngine`, reached through `openldk/interop`. No OpenSSL/C/FFI.
+
+- `src/engine.lisp` — drives `SSLEngine` wrap/unwrap; transport reads are framed
+  by the 5-byte TLS record header (no deadlock on a blocking transport, ~one
+  interpreted `unwrap` per record).
+- `src/streams.lisp` — the gray stream + client/server constructors.
+- `src/context.lisp` — `SSLContext` with key/trust managers.
+- `src/certificate.lisp` — peer X.509 accessors.
+- `compat/{cl+ssl,pure-tls}.lisp` — thin drop-in layers.
+
+OpenLDK interprets bytecode, so TLS 1.3 ECDHE is slow; restrict a context to
+TLS 1.2 + `TLS_RSA_WITH_AES_128_GCM_SHA256` for fast handshakes.
+
+## Conventions & Patterns
+
+- Interop via `openldk.interop` (`java-call`/`java-static`/`java-new`/`jstring`/
+  `make-java-array-of`/`with-foreign-errors`), as in `~/git/cl-jdbc`.
+- Compat layers **refuse** security-relevant options they can't honour
+  (`:verify-callback`, encrypted keys, PEM identity/CA) instead of ignoring
+  them; JSSE-native `:keystore`/`:truststore` are the supported path.
+- Set protocols/ciphers/ALPN/client-auth on one `SSLParameters` and apply it
+  once — otherwise a later `setSSLParameters` clobbers engine-level settings.
